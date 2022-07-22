@@ -13,8 +13,6 @@ import { ITerminalOptions } from 'common/services/Services';
 interface ICharAtlasCacheEntry {
   atlas: BaseCharAtlas;
   config: ICharAtlasConfig;
-  // N.B. This implementation potentially holds onto copies of the terminal forever, so
-  // this may cause memory leaks.
   ownedBy: number[];
 }
 

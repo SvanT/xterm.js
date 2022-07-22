@@ -12,9 +12,7 @@ import { IColorSet } from 'browser/Types';
 interface ICharAtlasCacheEntry {
   atlas: WebglCharAtlas;
   config: ICharAtlasConfig;
-  // N.B. This implementation potentially holds onto copies of the terminal forever, so
-  // this may cause memory leaks.
-  ownedBy: Terminal[];
+  ownedBy: WeakRef<Terminal>[];
 }
 
 const charAtlasCache: ICharAtlasCacheEntry[] = [];
@@ -38,7 +36,7 @@ export function acquireCharAtlas(
   // Check to see if the terminal already owns this config
   for (let i = 0; i < charAtlasCache.length; i++) {
     const entry = charAtlasCache[i];
-    const ownedByIndex = entry.ownedBy.indexOf(terminal);
+    const ownedByIndex = entry.ownedBy.findIndex(entry => entry.deref() === terminal);
     if (ownedByIndex >= 0) {
       if (configEquals(entry.config, newConfig)) {
         return entry.atlas;
@@ -59,7 +57,7 @@ export function acquireCharAtlas(
     const entry = charAtlasCache[i];
     if (configEquals(entry.config, newConfig)) {
       // Add the terminal to the cache entry and return
-      entry.ownedBy.push(terminal);
+      entry.ownedBy.push(new WeakRef(terminal));
       return entry.atlas;
     }
   }
@@ -67,7 +65,7 @@ export function acquireCharAtlas(
   const newEntry: ICharAtlasCacheEntry = {
     atlas: new WebglCharAtlas(document, newConfig),
     config: newConfig,
-    ownedBy: [terminal]
+    ownedBy: [new WeakRef(terminal)]
   };
   charAtlasCache.push(newEntry);
   return newEntry.atlas;
@@ -79,17 +77,13 @@ export function acquireCharAtlas(
  */
 export function removeTerminalFromCache(terminal: Terminal): void {
   for (let i = 0; i < charAtlasCache.length; i++) {
-    const index = charAtlasCache[i].ownedBy.indexOf(terminal);
-    if (index !== -1) {
-      if (charAtlasCache[i].ownedBy.length === 1) {
-        // Remove the cache entry if it's the only terminal
-        charAtlasCache[i].atlas.dispose();
-        charAtlasCache.splice(i, 1);
-      } else {
-        // Remove the reference from the cache entry
-        charAtlasCache[i].ownedBy.splice(index, 1);
-      }
-      break;
+    // Clear out any garbage collected weak references as well as the removed terminal
+    charAtlasCache[i].ownedBy = charAtlasCache[i].ownedBy.filter(entry => ![undefined, terminal].includes(entry.deref()));
+
+    if (charAtlasCache[i].ownedBy.length === 0) {
+      // Remove the cache entry as it no longer have any references
+      charAtlasCache[i].atlas.dispose();
+      charAtlasCache.splice(i, 1);
     }
   }
 }

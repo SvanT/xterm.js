@@ -5,6 +5,7 @@
     "lib": [
       "dom",
       "es6",
+      "ESNext",
     ],
     "rootDir": ".",
     "outDir": "../out",
