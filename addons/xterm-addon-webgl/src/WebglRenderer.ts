@@ -6,7 +6,7 @@
 import { GlyphRenderer } from './GlyphRenderer';
 import { LinkRenderLayer } from './renderLayer/LinkRenderLayer';
 import { CursorRenderLayer } from './renderLayer/CursorRenderLayer';
-import { acquireCharAtlas } from './atlas/CharAtlasCache';
+import { acquireCharAtlas, removeTerminalFromCache } from './atlas/CharAtlasCache';
 import { WebglCharAtlas } from './atlas/WebglCharAtlas';
 import { RectangleRenderer } from './RectangleRenderer';
 import { IWebGL2RenderingContext } from './Types';
@@ -112,6 +112,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
       l.dispose();
     }
     this._canvas.parentElement?.removeChild(this._canvas);
+    removeTerminalFromCache(this._terminal);
     super.dispose();
   }
 
@@ -342,8 +343,8 @@ export class WebglRenderer extends Disposable implements IRenderer {
 
         // Nothing has changed, no updates needed
         if (this._model.cells[i] === code &&
-            this._model.cells[i + RENDER_MODEL_BG_OFFSET] === this._workColors.bg &&
-            this._model.cells[i + RENDER_MODEL_FG_OFFSET] === this._workColors.fg) {
+          this._model.cells[i + RENDER_MODEL_BG_OFFSET] === this._workColors.bg &&
+          this._model.cells[i + RENDER_MODEL_FG_OFFSET] === this._workColors.fg) {
           continue;
         }
 
